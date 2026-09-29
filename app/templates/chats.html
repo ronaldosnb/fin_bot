@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Conversas · FinBot{% endblock %}
+{% block content %}
+<header class="page-head"><div><p class="kicker">Permissões</p><h1>Conversas</h1><p>O bot só responde a comandos nas conversas habilitadas.</p></div></header>
+<section class="section-block"><div class="section-heading"><h2>Adicionar conversa</h2></div>
+  <p class="hint">Copie o JID da Evolution ou envie <code>/fin ajuda</code> na conversa para ela aparecer abaixo como pendente.</p>
+  <form action="/admin/chats" method="post" class="inline-form">
+    <input type="hidden" name="csrf" value="{{ session.csrf }}">
+    <label>JID<input name="jid" placeholder="5511999999999@s.whatsapp.net ou …@g.us" required></label>
+    <label>Nome<input name="name" placeholder="Nome para o painel"></label>
+    <label class="check"><input name="enabled" type="checkbox" value="true"> Autorizar</label>
+    <button class="button primary" type="submit">Salvar conversa</button>
+  </form>
+</section>
+<section class="section-block"><div class="section-heading"><h2>Conversas conhecidas</h2><span>{{ chats|length }} no total</span></div>
+  {% if chats %}<div class="chat-list">{% for chat in chats %}
+    <form action="/admin/chats" method="post" class="chat-row">
+      <input type="hidden" name="csrf" value="{{ session.csrf }}"><input type="hidden" name="jid" value="{{ chat.jid }}">
+      <div class="chat-identity"><span class="state-dot {{ 'is-on' if chat.enabled else '' }}"></span><div><strong>{{ chat.name }}</strong><small>{{ chat.jid }}</small></div></div>
+      <label>Nome<input name="name" value="{{ chat.name }}" aria-label="Nome de {{ chat.jid }}"></label>
+      <label class="check"><input name="enabled" type="checkbox" value="true" {% if chat.enabled %}checked{% endif %}> Autorizada</label>
+      {% if chat.kind == 'group' %}<label class="check"><input name="owner_private" type="checkbox" value="true" {% if chat.owner_private %}checked{% endif %}> Grupo privado do dono</label>{% endif %}
+      <button class="button secondary" type="submit">Salvar</button>
+    </form>
+  {% endfor %}</div>{% else %}<p class="empty">Nenhuma conversa observada. Envie um comando com <code>/fin</code> ou cadastre um JID acima.</p>{% endif %}
+</section>
+{% endblock %}

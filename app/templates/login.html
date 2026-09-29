@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Entrar · FinBot</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="login-page">
+  <main class="login-panel">
+    <div class="brand"><span class="brand-mark">f.</span><span><strong>FinBot</strong><small>Livro caixa</small></span></div>
+    <h1>Seu controle,<br>em ordem.</h1>
+    <p>Entre para revisar lançamentos e escolher onde o bot pode responder.</p>
+    {% if error %}<div class="error" role="alert">{{ error }}</div>{% endif %}
+    <form action="/admin/login" method="post" class="stack-form">
+      <label for="password">Senha administrativa</label>
+      <input id="password" name="password" type="password" autocomplete="current-password" required autofocus>
+      <button type="submit" class="button primary">Entrar no painel</button>
+    </form>
+  </main>
+</body>
+</html>

@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f7f5ef">
+  <title>{% block title %}FinBot{% endblock %}</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar">
+      <a class="brand" href="/admin"><span class="brand-mark">f.</span><span><strong>FinBot</strong><small>Livro caixa</small></span></a>
+      <nav aria-label="Navegação principal">
+        <a href="/admin" {% if active == 'dashboard' %}aria-current="page"{% endif %}>Visão geral</a>
+        <a href="/admin/chats" {% if active == 'chats' %}aria-current="page"{% endif %}>Conversas</a>
+        <a href="/admin/entries" {% if active == 'entries' %}aria-current="page"{% endif %}>Lançamentos</a>
+        <a href="/admin/schedules" {% if active == 'schedules' %}aria-current="page"{% endif %}>Recorrências</a>
+        <a href="/admin/categories" {% if active == 'categories' %}aria-current="page"{% endif %}>Categorias</a>
+        <a href="/admin/jobs" {% if active == 'jobs' %}aria-current="page"{% endif %}>Falhas</a>
+      </nav>
+      <form action="/admin/logout" method="post" class="logout">
+        <input type="hidden" name="csrf" value="{{ session.csrf }}">
+        <button type="submit" class="text-button">Sair do painel</button>
+      </form>
+    </aside>
+    <main class="main">
+      {% if notice %}<div class="notice" role="status">{{ notice }}</div>{% endif %}
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+</body>
+</html>

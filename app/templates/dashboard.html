@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Visão geral · FinBot{% endblock %}
+{% block content %}
+<header class="page-head"><div><p class="kicker">{{ month }}</p><h1>Visão geral</h1><p>Uma leitura rápida de todas as contas administradas.</p></div><a class="button primary" href="/admin/entries">Revisar lançamentos</a></header>
+<section class="totals" aria-label="Totais realizados do mês">
+  <div><span>Receitas realizadas</span><strong class="positive">{{ income|money }}</strong></div>
+  <div><span>Despesas realizadas</span><strong>{{ expense|money }}</strong></div>
+  <div><span>Saldo realizado</span><strong class="{{ 'positive' if income-expense >= 0 else 'negative' }}">{{ (income-expense)|money }}</strong></div>
+</section>
+<div class="dashboard-grid">
+  <section class="section-block"><div class="section-heading"><h2>Contas</h2><a href="/admin/entries">Ver lançamentos</a></div>
+    {% if ledgers %}<ul class="ledger-list">{% for ledger in ledgers %}<li><span><strong>{{ ledger.name }}</strong><small>{{ 'Grupo' if ledger.kind == 'group' else 'Pessoal' }}</small></span><a href="/admin/entries?ledger_id={{ ledger.id }}">Abrir <span aria-hidden="true">↗</span></a></li>{% endfor %}</ul>
+    {% else %}<p class="empty">As contas aparecem aqui após o primeiro comando de uma conversa autorizada.</p>{% endif %}
+  </section>
+  <section class="section-block"><div class="section-heading"><h2>Operação</h2></div>
+    <dl class="status-list"><div><dt>Conversas autorizadas</dt><dd>{{ chats_enabled }}</dd></div><div><dt>Aguardando autorização</dt><dd>{{ chats_pending }}</dd></div><div><dt>Receitas previstas no mês</dt><dd>{{ planned_income|money }}</dd></div><div><dt>Despesas previstas no mês</dt><dd>{{ planned_expense|money }}</dd></div><div><dt>Falhas de processamento</dt><dd>{{ failed }}</dd></div></dl>
+    <a class="button secondary" href="{{ '/admin/jobs' if failed else '/admin/chats' }}">{{ 'Examinar falhas' if failed else 'Gerenciar conversas' }}</a>
+  </section>
+</div>
+{% endblock %}

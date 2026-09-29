@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Lançamentos · FinBot{% endblock %}
+{% block content %}
+<header class="page-head"><div><p class="kicker">Livro caixa</p><h1>Lançamentos</h1><p>Revise valores, datas, categorias e confirmações por conta.</p></div></header>
+<form action="/admin/entries" method="get" class="filter-bar"><label for="ledger_id">Conta</label><select id="ledger_id" name="ledger_id" onchange="this.form.submit()">{% for ledger in ledgers %}<option value="{{ ledger.id }}" {% if ledger.id == selected %}selected{% endif %}>{{ ledger.name }}</option>{% endfor %}</select><button class="button secondary" type="submit">Abrir</button></form>
+<section class="section-block"><div class="section-heading"><h2>Lançamentos</h2><span>Página {{ page }}</span></div>
+  {% if entries %}<div class="entry-list">{% for entry in entries %}
+  <article class="entry-row">
+    <div class="entry-summary"><div><strong>#{{ entry.id }} · {{ entry.description }}</strong><small>{{ 'Receita' if entry.kind == 'income' else 'Despesa' }} · {{ entry.occurred_on.strftime('%d/%m/%Y') }}{% if entry.installment_count %} · parcela {{ entry.installment_number }}/{{ entry.installment_count }}{% endif %}</small></div><div class="entry-amount"><strong class="{{ 'positive' if entry.kind == 'income' else '' }}">{{ entry.amount_cents|money }}</strong><span class="pill {{ 'planned' if entry.status == 'planned' else '' }}">{{ 'Previsto' if entry.status == 'planned' else 'Realizado' }}</span></div></div>
+    <form action="/admin/entries/{{ entry.id }}" method="post" class="entry-edit">
+      <input type="hidden" name="csrf" value="{{ session.csrf }}">
+      <label>Valor (R$)<input name="amount" inputmode="decimal" value="{{ '%.2f'|format(entry.amount_cents / 100) }}" required></label>
+      <label>Descrição<input name="description" value="{{ entry.description }}" maxlength="240" required></label>
+      <label>Data<input name="occurred_on" type="date" value="{{ entry.occurred_on.isoformat() }}" required></label>
+      <label>Categoria<select name="category">{% if entry.category not in categories[entry.kind] %}<option value="{{ entry.category }}" selected>{{ entry.category }} (inativa)</option>{% endif %}{% for category in categories[entry.kind] %}<option value="{{ category }}" {% if category == entry.category %}selected{% endif %}>{{ category }}</option>{% endfor %}</select></label>
+      <label>Status<select name="status"><option value="realized" {% if entry.status == 'realized' %}selected{% endif %}>Realizado</option><option value="planned" {% if entry.status == 'planned' %}selected{% endif %}>Previsto</option></select></label>
+      <button class="button secondary" type="submit">Salvar</button>
+    </form>
+    <form action="/admin/entries/{{ entry.id }}/delete" method="post" class="delete-form" onsubmit="return confirm('Excluir lançamento #{{ entry.id }}?')"><input type="hidden" name="csrf" value="{{ session.csrf }}"><button type="submit" class="text-button danger">Excluir lançamento</button></form>
+  </article>{% endfor %}</div>{% else %}<p class="empty">Nenhum lançamento nesta página.</p>{% endif %}
+  {% if selected and (page > 1 or has_next) %}<nav class="pager" aria-label="Páginas de lançamentos">{% if page > 1 %}<a class="button secondary" href="/admin/entries?ledger_id={{ selected }}&page={{ page-1 }}">Anterior</a>{% endif %}<span>Página {{ page }}</span>{% if has_next %}<a class="button secondary" href="/admin/entries?ledger_id={{ selected }}&page={{ page+1 }}">Próxima</a>{% endif %}</nav>{% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+{% block title %}Falhas · FinBot{% endblock %}
+{% block content %}
+<header class="page-head"><div><p class="kicker">Operação</p><h1>Falhas</h1><p>Mensagens com erro ficam retidas para revisão e nova tentativa.</p></div></header>
+<section class="section-block"><div class="section-heading"><h2>Recebimento</h2></div>{% if inbox %}<div class="category-list">{% for job in inbox %}<div class="schedule-row"><div><strong>#{{ job.id }} · {{ job.message_id }}</strong><small>{{ job.error or 'Erro não informado' }}</small></div><form action="/admin/jobs/inbox/{{ job.id }}/retry" method="post"><input type="hidden" name="csrf" value="{{ session.csrf }}"><button class="button secondary" type="submit">Tentar de novo</button></form></div>{% endfor %}</div>{% else %}<p class="empty">Nenhuma mensagem com falha.</p>{% endif %}</section>
+<section class="section-block"><div class="section-heading"><h2>Envio de respostas</h2></div>{% if outbox %}<div class="category-list">{% for job in outbox %}<div class="schedule-row"><div><strong>#{{ job.id }} · {{ job.chat_jid }}</strong><small>{{ job.error or 'Erro não informado' }}</small></div><form action="/admin/jobs/outbox/{{ job.id }}/retry" method="post"><input type="hidden" name="csrf" value="{{ session.csrf }}"><button class="button secondary" type="submit">Tentar de novo</button></form></div>{% endfor %}</div>{% else %}<p class="empty">Nenhuma resposta com falha.</p>{% endif %}</section>
+{% endblock %}
