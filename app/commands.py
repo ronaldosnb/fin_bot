@@ -6,6 +6,8 @@ from dateutil.relativedelta import relativedelta
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.responses import CommandResponse
+from app.pdf_report import render_monthly_pdf
 from app.ai import parse_report_query, parse_transaction
 from app.config import get_settings
 from app.finance import (
@@ -19,7 +21,8 @@ from app.finance import (
     money_to_cents,
     parse_date,
     recent_entries,
-    report,
+    monthly_report,
+    report_summary,
 )
 from app.models import Chat, Entry, Schedule, utcnow
 
@@ -30,7 +33,7 @@ HELP = (
     "/fin recebi 2500 de salário\n"
     "/fin comprei notebook por 1200 em 6x\n"
     "/fin pago aluguel de 1000 todo mês\n"
-    "/fin relatorio [MM/AAAA]\n"
+    "/fin relatorio [MM/AAAA] - resumo e PDF\n"
     "/fin quanto gastei com alimentação no mês passado\n"
     "/fin listar\n"
     "/fin confirmar ID\n"
@@ -112,7 +115,7 @@ def _authorized_context(db: Session, payload: dict) -> tuple[Chat | None, str, s
     return chat, sender, chat_jid, "group" if is_group else "private"
 
 
-def process_command(db: Session, payload: dict) -> tuple[str, str] | None:
+def _process_command(db: Session, payload: dict) -> tuple[str, str] | CommandResponse | None:
     data = payload.get("data") or {}
     key = data.get("key") or {}
     message = data.get("message") or {}
@@ -137,11 +140,14 @@ def process_command(db: Session, payload: dict) -> tuple[str, str] | None:
         return chat_jid, HELP
     if lower.startswith("relatorio") or lower.startswith("relatório"):
         period = body.split(maxsplit=1)[1] if " " in body else ""
-        try:
+        monthly_period = period.strip().lower()
+        if (re.fullmatch(r"\d{1,2}/\d{4}", monthly_period) or monthly_period in {
+            "", "este mes", "esse mes", "este mês", "esse mês", "mes passado", "mês passado",
+        }):
             year, month = _parse_report_month(period, today)
-            return chat_jid, report(db, ledger.id, year, month)
-        except ValueError:
-            pass
+            data = monthly_report(db, ledger.id, year, month)
+            return CommandResponse(chat_jid, report_summary(data), render_monthly_pdf(data),
+                                   f"finbot-relatorio-{year}-{month:02d}.pdf")
     if lower.startswith(("quanto ", "quais ", "saldo ", "resumo ", "despesas ", "receitas ")) or lower in {"saldo", "resumo", "despesas", "receitas"} or lower.startswith(("relatorio ", "relatório ")):
         categories = {kind: category_names(db, kind) for kind in ("expense", "income")}
         query = parse_report_query(body, today, categories)
@@ -239,3 +245,10 @@ def process_command(db: Session, payload: dict) -> tuple[str, str] | None:
     else:
         note = ""
     return chat_jid, "Registrado: " + _format_entry(first) + note
+
+
+def process_command(db: Session, payload: dict) -> CommandResponse | None:
+    result = _process_command(db, payload)
+    if result is None or isinstance(result, CommandResponse):
+        return result
+    return CommandResponse(*result)
