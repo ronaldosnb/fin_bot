@@ -3,9 +3,9 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#f7f5ef">
   <title>{% block title %}FinBot{% endblock %}</title>
-  <link rel="stylesheet" href="/static/style.css">
+  {% include "theme-head.html" %}
+  <link rel="stylesheet" href="/static/style.css?v=2">
 </head>
 <body>
   <div class="shell">
@@ -19,10 +19,13 @@
         <a href="/admin/categories" {% if active == 'categories' %}aria-current="page"{% endif %}>Categorias</a>
         <a href="/admin/jobs" {% if active == 'jobs' %}aria-current="page"{% endif %}>Falhas</a>
       </nav>
+      <div class="sidebar-actions">
+        {% include "theme-toggle.html" %}
       <form action="/admin/logout" method="post" class="logout">
         <input type="hidden" name="csrf" value="{{ session.csrf }}">
         <button type="submit" class="text-button">Sair do painel</button>
       </form>
+      </div>
     </aside>
     <main class="main">
       {% if notice %}<div class="notice" role="status">{{ notice }}</div>{% endif %}
