@@ -8,7 +8,8 @@ from dateutil.relativedelta import relativedelta
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import Audit, Category, Entry, Ledger, Schedule
+from app.models import Audit, Category, Chat, Entry, Ledger, Schedule
+from app.report_data import MonthlyReport, ReportEntry
 
 
 DEFAULT_CATEGORIES = {
@@ -200,7 +201,7 @@ def create_entries(
     return entries
 
 
-def report(db: Session, ledger_id: int, year: int, month: int) -> str:
+def monthly_report(db: Session, ledger_id: int, year: int, month: int) -> MonthlyReport:
     if not 1 <= month <= 12 or not 2000 <= year <= date.today().year + 2:
         raise ValueError("Mês inválido")
     start = date(year, month, 1)
@@ -208,30 +209,42 @@ def report(db: Session, ledger_id: int, year: int, month: int) -> str:
     for schedule in db.scalars(select(Schedule).where(Schedule.ledger_id == ledger_id, Schedule.active.is_(True))):
         expand_schedule(db, schedule, end - timedelta(days=1))
     db.flush()
-    entries = list(db.scalars(select(Entry).where(
-        Entry.ledger_id == ledger_id,
-        Entry.occurred_on >= start,
-        Entry.occurred_on < end,
-        Entry.deleted_at.is_(None),
-    )))
-    totals = defaultdict(int)
-    categories = defaultdict(int)
-    for entry in entries:
-        totals[(entry.status, entry.kind)] += entry.amount_cents
-        if entry.status == "realized" and entry.kind == "expense":
-            categories[entry.category] += entry.amount_cents
-    income = totals["realized", "income"]
-    expense = totals["realized", "expense"]
+    entries = db.scalars(select(Entry).where(
+        Entry.ledger_id == ledger_id, Entry.occurred_on >= start,
+        Entry.occurred_on < end, Entry.deleted_at.is_(None),
+    ).order_by(Entry.occurred_on, Entry.id))
+    ledger = db.get(Ledger, ledger_id)
+    chat = db.get(Chat, ledger.scope_jid) if ledger.kind != "owner" else None
+    name = chat.name if chat and chat.name else ledger.name
+    return MonthlyReport(name, year, month, tuple(
+        ReportEntry(e.id, e.occurred_on, e.description, e.category, e.amount_cents,
+                    e.kind, e.status, e.installment_number, e.installment_count)
+        for e in entries
+    ))
+
+
+def report_summary(data: MonthlyReport) -> str:
+    income = data.total("realized", "income")
+    expense = data.total("realized", "expense")
     lines = [
-        f"Relatório de {month:02d}/{year}",
+        f"Relatório de {data.month:02d}/{data.year}",
         f"Receitas realizadas: {format_money(income)}",
         f"Despesas realizadas: {format_money(expense)}",
         f"Saldo realizado: {format_money(income - expense)}",
-        f"Previsto: {format_money(totals['planned', 'income'])} em receitas e {format_money(totals['planned', 'expense'])} em despesas",
+        f"Previsto: {format_money(data.total('planned', 'income'))} em receitas e {format_money(data.total('planned', 'expense'))} em despesas",
     ]
+    if not data.entries:
+        lines.append("Nenhum lançamento neste mês.")
+    return "\n".join(lines)
+
+
+def report(db: Session, ledger_id: int, year: int, month: int) -> str:
+    data = monthly_report(db, ledger_id, year, month)
+    lines = [report_summary(data)]
+    categories = data.categories("realized", "expense")
     if categories:
         lines.append("Despesas por categoria:")
-        lines.extend(f"• {name}: {format_money(value)}" for name, value in sorted(categories.items(), key=lambda pair: -pair[1]))
+        lines.extend(f"• {name}: {format_money(value)}" for name, value in categories)
     return "\n".join(lines)
 
 
