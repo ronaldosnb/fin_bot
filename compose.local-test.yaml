@@ -1,0 +1,26 @@
+services:
+  migrate:
+    image: finbot-local-test
+    command: alembic upgrade head
+    env_file: .env
+    network_mode: host
+
+  app:
+    image: finbot-local-test
+    restart: unless-stopped
+    command: uvicorn app.main:app --host 127.0.0.1 --port 8000
+    env_file: .env
+    network_mode: host
+    environment:
+      SESSION_SECURE: "false"
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+
+  worker:
+    image: finbot-local-test
+    restart: unless-stopped
+    command: python -m app.worker
+    env_file: .env
+    network_mode: host
+    depends_on:
+      migrate: {condition: service_completed_successfully}
