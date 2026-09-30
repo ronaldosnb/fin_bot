@@ -9,3 +9,5 @@ O painel é uma mesa de conferência de um livro caixa: superfícies claras, lin
 - Navegação lateral no desktop e faixa rolável no celular.
 - Tabelas com linhas bem delimitadas; formulários de edição expostos no contexto, sem diálogos.
 - Mensagens de erro e sucesso nomeiam o resultado; foco visível por teclado.
+- Tema escuro com fundo verde grafite, superfícies elevadas e acentos verdes claros; estados de erro e previsão mantêm suas cores semânticas.
+- O tema segue a preferência do sistema até o usuário alternar pelo botão **Modo escuro**, disponível no login e na navegação. A escolha fica salva no navegador.
