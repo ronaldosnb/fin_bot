@@ -14,7 +14,7 @@
     root.dataset.theme = theme;
     document.querySelectorAll('[data-theme-toggle]').forEach(button => {
       button.hidden = false;
-      button.setAttribute('aria-pressed', String(theme === 'dark'));
+      button.setAttribute('aria-checked', String(theme === 'dark'));
     });
     const color = document.querySelector('meta[name="theme-color"]');
     if (color) color.content = theme === 'dark' ? '#141b18' : '#f7f5ef';
