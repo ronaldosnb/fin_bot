@@ -2,6 +2,7 @@ import base64
 import secrets
 import threading
 import time
+import unicodedata
 from datetime import date, datetime
 from urllib.parse import urlencode
 from zoneinfo import ZoneInfo
@@ -182,18 +183,33 @@ def save_chat(session: dict = Depends(require_admin), csrf: str = Form(...), jid
 
 
 @router.get("/admin/entries", response_class=HTMLResponse)
-def entries_page(request: Request, ledger_id: int | None = None, page: int = 1,
+def entries_page(request: Request, ledger_id: int | None = None, page: int = 1, q: str = "",
                  session: dict = Depends(require_admin)):
     page = max(1, page)
+    q = q.strip()
+
+    def search_key(value: str) -> str:
+        return "".join(char for char in unicodedata.normalize("NFKD", value.casefold())
+                       if not unicodedata.combining(char))
+
     with SessionLocal() as db:
         ledgers = list(db.scalars(select(Ledger).order_by(Ledger.name)))
-        selected = ledger_id or (ledgers[0].id if ledgers else None)
+        chat_names = dict(db.execute(select(Chat.jid, Chat.name)).all())
+        ledger_names = {ledger.id: (chat_names.get(ledger.scope_jid) or ledger.name)
+                        if ledger.kind != "owner" else ledger.name for ledger in ledgers}
+        ledgers.sort(key=lambda ledger: (search_key(ledger_names[ledger.id]), ledger.id))
+        if q:
+            ledgers = [ledger for ledger in ledgers
+                       if search_key(q) in search_key(ledger_names[ledger.id])
+                       or search_key(q) in search_key(ledger.scope_jid)]
+        selected = ledger_id if any(ledger.id == ledger_id for ledger in ledgers) else (ledgers[0].id if ledgers else None)
         total = (db.scalar(select(func.count()).select_from(Entry).where(
             Entry.ledger_id == selected, Entry.deleted_at.is_(None))) or 0) if selected else 0
         entries = list(db.scalars(select(Entry).where(Entry.ledger_id == selected, Entry.deleted_at.is_(None))
                                   .order_by(Entry.occurred_on.desc(), Entry.id.desc()).offset((page - 1) * 100).limit(100))) if selected else []
         categories = {kind: category_names(db, kind) for kind in ("expense", "income")}
     return _page(request, "entries.html", session, active="entries", ledgers=ledgers, selected=selected,
+                 ledger_names=ledger_names, q=q,
                  entries=entries, categories=categories, page=page, has_next=page * 100 < total,
                  notice=request.query_params.get("notice", ""))
 
