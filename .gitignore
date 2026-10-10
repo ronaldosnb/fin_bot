@@ -8,3 +8,10 @@ __pycache__/
 .ruff_cache/
 *.db
 backups/
+
+# Arquivos do ambiente pessoal (VPS e testes locais)
+TESTE_DOKPLOY.md
+compose.vps-app.yaml
+compose.dokploy-test.yaml
+compose.local-test.yaml
+panel-ip.conf
