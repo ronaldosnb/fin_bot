@@ -73,6 +73,8 @@ Envie `/fin ajuda` em uma conversa privada ou grupo. A conversa aparecerá como 
 /fin cancelar recorrencia 12
 ```
 
+`/fin relatorio` envia um PDF do mês atual com um resumo na legenda; `/fin relatorio MM/AAAA` permite escolher o mês. O documento inclui receitas, despesas, saldo, totais por categoria e todos os lançamentos do período, separando realizados e previstos. Consultas livres, como `/fin quanto gastei com alimentação no mês passado`, continuam em texto. O PDF é mantido na fila somente até o envio bem-sucedido; em caso de falha, pode ser reenviado pelo painel **Falhas**. Não há link público para o documento.
+
 O bot interpreta um lançamento por comando. Se a data não vier na mensagem, usa a data de envio em `America/Sao_Paulo`. Para parcelas, o valor informado é o **total** e a data indicada é o vencimento da primeira parcela; sem data, a primeira parcela vence na data da mensagem. Ocorrências recorrentes futuras ficam previstas. A primeira ocorrência com data presente ou passada é marcada como realizada. Os relatórios mensais separam realizados e previstos.
 
 Cada pessoa consulta e corrige somente sua conta privada. Em grupos autorizados, qualquer membro pode consultar e corrigir a conta geral do grupo. O painel mostra todas as contas, inclusive lançamentos e recorrências, e permite revisar mensagens que falharam.
@@ -106,3 +108,16 @@ O estado `failed` em **Falhas** permite nova tentativa pelo painel. As tabelas `
 ## Desenvolvimento local
 
 Use `SESSION_SECURE=false` em `.env` somente para acessar o painel por HTTP local. Para executar fora do Compose, configure `DATABASE_URL` para um PostgreSQL acessível, instale `requirements.txt`, rode `alembic upgrade head` e inicie `uvicorn app.main:app --reload` e `python -m app.worker` em processos separados.
+
+## Verificar relatórios em PDF
+
+Após atualizar a imagem, aplique `alembic upgrade head` antes de iniciar app e worker. A migração acrescenta campos opcionais à fila de saída e preserva respostas de texto existentes. O Compose já executa a migração antes dos processos.
+
+```bash
+docker build -t finbot-local-test .
+docker run --rm -v "$PWD/tests:/srv/finbot/tests:ro" -e DATABASE_URL=sqlite:// -e OWNER_JID=owner@s.whatsapp.net finbot-local-test python -m unittest discover -s tests -v
+```
+
+A suíte usa um banco temporário em memória e simula os envios para a Evolution.
+
+Antes de atualizar o banco, faça um backup. Para voltar à imagem anterior, aguarde o envio de todos os anexos pendentes e mantenha as novas colunas opcionais no banco. Reverter a imagem com PDFs ainda na fila faria o worker antigo tratá-los como respostas de texto.
