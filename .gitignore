@@ -1,4 +1,5 @@
 .env
+app.env
 .finbot-admin-password
 .venv/
 __pycache__/
