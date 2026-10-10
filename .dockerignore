@@ -1,4 +1,6 @@
 .env
+app.env
+.finbot-admin-password
 .git
 __pycache__
 *.pyc
