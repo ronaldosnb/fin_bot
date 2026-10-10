@@ -238,16 +238,6 @@ def report_summary(data: MonthlyReport) -> str:
     return "\n".join(lines)
 
 
-def report(db: Session, ledger_id: int, year: int, month: int) -> str:
-    data = monthly_report(db, ledger_id, year, month)
-    lines = [report_summary(data)]
-    categories = data.categories("realized", "expense")
-    if categories:
-        lines.append("Despesas por categoria:")
-        lines.extend(f"• {name}: {format_money(value)}" for name, value in categories)
-    return "\n".join(lines)
-
-
 def filtered_report(db: Session, ledger_id: int, start: date, end: date,
                     kind: str, category: str | None, status: str) -> str:
     if start > end or start < date(2000, 1, 1) or end > date.today() + relativedelta(years=2) or (end - start).days > 730:

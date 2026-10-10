@@ -19,7 +19,7 @@ from sqlalchemy import func, select
 from app.config import get_settings
 from app.db import SessionLocal
 from app.finance import audit_change, category_names, format_money, money_to_cents, parse_date
-from app.models import Category, Chat, Entry, Inbox, Ledger, Outbox, Schedule, utcnow
+from app.models import Audit, Category, Chat, Entry, Inbox, Ledger, Outbox, Schedule, utcnow
 
 
 router = APIRouter()
@@ -314,6 +314,8 @@ def cancel_schedule(schedule_id: int, session: dict = Depends(require_admin), cs
         schedule.active = False
         for entry in db.scalars(select(Entry).where(Entry.schedule_id == schedule.id, Entry.status == "planned", Entry.deleted_at.is_(None))):
             entry.deleted_at = utcnow()
+        db.add(Audit(actor_jid="admin", action="cancel_recurrence", entry_id=None,
+                     detail={"source": "panel", "schedule_id": schedule.id}))
         db.commit()
     return _redirect("/admin/schedules", "Recorrência cancelada")
 
