@@ -10,7 +10,7 @@ from sqlalchemy import or_, select
 from app.commands import process_command
 from app.config import get_settings, validate_runtime
 from app.db import SessionLocal
-from app.evolution import send_text
+from app.evolution import send_text, send_document
 from app.finance import expand_schedule, seed_categories
 from app.models import Inbox, Outbox, Schedule
 
@@ -64,8 +64,8 @@ def process_inbox() -> bool:
             seed_categories(db)
             result = process_command(db, row.payload)
             if result:
-                chat_jid, text = result
-                db.add(Outbox(inbox_id=row.id, chat_jid=chat_jid, text=text))
+                db.add(Outbox(inbox_id=row.id, chat_jid=result.chat_jid, text=result.text,
+                              pdf_bytes=result.pdf_bytes, file_name=result.file_name))
             row.state = "done"
             row.payload = {}
             row.error = None
@@ -95,9 +95,14 @@ def process_outbox() -> bool:
     with SessionLocal() as db:
         row = db.get(Outbox, row_id)
         try:
-            send_text(row.chat_jid, row.text)
+            if row.pdf_bytes is not None:
+                send_document(row.chat_jid, row.pdf_bytes, row.file_name, row.text)
+            else:
+                send_text(row.chat_jid, row.text)
             row.state = "sent"
             row.text = ""
+            row.pdf_bytes = None
+            row.file_name = None
             row.error = None
             db.commit()
         except Exception as exc:
