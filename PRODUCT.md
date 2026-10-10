@@ -12,7 +12,7 @@ O proprietário administra o painel e usa seu número pessoal no WhatsApp. Conta
 
 ## Product Purpose
 
-Registrar receitas e despesas a partir de comandos de texto no WhatsApp, categorizar lançamentos e responder consultas financeiras em texto.
+Registrar receitas e despesas a partir de comandos de texto no WhatsApp, categorizar lançamentos, enviar o relatório mensal em PDF e responder consultas livres em texto.
 
 ## Operating Context
 
@@ -24,7 +24,7 @@ Uma instância Evolution API conectada ao número pessoal recebe mensagens. A in
 - Cada contato tem uma conta própria. Cada grupo autorizado tem uma conta compartilhada.
 - Compras parceladas, recorrências, lançamentos previstos e realizados.
 - Parcelas entram pelo vencimento. Recorrências futuras precisam de confirmação.
-- Relatórios em texto, em português, com valores em BRL.
+- Relatório mensal em PDF e consultas livres em texto, em português, com valores em BRL.
 - O chat “Mensagem para mim” é preferido para o proprietário; um grupo privado serve de alternativa.
 - Somente o proprietário entra no painel.
 - A primeira versão aceita texto e não controla faturas de cartão.
