@@ -2,7 +2,7 @@
 
 Bot financeiro em português para um número pessoal de WhatsApp conectado à Evolution API. Comandos começam com `/fin`. Conversas privadas autorizadas têm contas individuais; grupos autorizados têm uma conta geral por grupo. O painel web é exclusivo do administrador.
 
-Para o ambiente de teste já configurado no Dokploy, siga [TESTE_DOKPLOY.md](TESTE_DOKPLOY.md).
+Para o ambiente atual executado integralmente na VPS, siga [TESTE_DOKPLOY.md](TESTE_DOKPLOY.md).
 
 ## Componentes
 
