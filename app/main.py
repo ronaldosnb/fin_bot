@@ -29,7 +29,12 @@ def healthz() -> dict[str, str]:
 
 @app.post("/webhook/evolution")
 async def evolution_webhook(request: Request) -> dict[str, bool]:
-    payload = await request.json()
+    try:
+        payload = await request.json()
+    except ValueError:
+        return {"ok": True}
+    if not isinstance(payload, dict):
+        return {"ok": True}
     event = str(payload.get("event") or "").lower().replace("_", ".")
     if event != "messages.upsert":
         return {"ok": True}
@@ -45,6 +50,8 @@ async def evolution_webhook(request: Request) -> dict[str, bool]:
     if not message_id or not key.get("remoteJid"):
         return {"ok": True}
     message = data.get("message") or {}
+    if not isinstance(message, dict):
+        return {"ok": True}
     for wrapper in ("ephemeralMessage", "viewOnceMessage", "viewOnceMessageV2"):
         if wrapper in message:
             message = (message[wrapper] or {}).get("message") or {}

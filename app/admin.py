@@ -84,7 +84,8 @@ def login_page(request: Request):
 
 @router.post("/admin/login")
 def login(request: Request, password: str = Form(...)):
-    client_ip = request.headers.get("x-forwarded-for", "").split(",")[0].strip() or request.client.host
+    forwarded = [ip.strip() for ip in request.headers.get("x-forwarded-for", "").split(",") if ip.strip()]
+    client_ip = forwarded[-1] if forwarded else request.client.host
     now = time.monotonic()
     with login_lock:
         recent = [attempt for attempt in login_attempts.get(client_ip, []) if now - attempt < 900]
@@ -229,12 +230,17 @@ def edit_entry(entry_id: int, session: dict = Depends(require_admin), csrf: str 
             raise HTTPException(status_code=400, detail="Status inválido")
         if not 1 <= len(description.strip()) <= 240:
             raise HTTPException(status_code=400, detail="Descrição inválida")
+        try:
+            new_amount = money_to_cents(amount)
+            new_date = parse_date(occurred_on, entry.occurred_on)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
         previous = {"amount_cents": entry.amount_cents, "description": entry.description,
                     "category": entry.category, "occurred_on": entry.occurred_on.isoformat(), "status": entry.status}
-        entry.amount_cents = money_to_cents(amount)
+        entry.amount_cents = new_amount
         entry.description = description.strip()
         entry.category = category
-        entry.occurred_on = parse_date(occurred_on, entry.occurred_on)
+        entry.occurred_on = new_date
         entry.status = status
         current = {"amount_cents": entry.amount_cents, "description": entry.description,
                    "category": entry.category, "occurred_on": entry.occurred_on.isoformat(), "status": entry.status}
