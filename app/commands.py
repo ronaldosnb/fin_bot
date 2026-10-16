@@ -115,15 +115,23 @@ def _authorized_context(db: Session, payload: dict) -> tuple[Chat | None, str, s
     return chat, sender, chat_jid, "group" if is_group else "private"
 
 
-def _process_command(db: Session, payload: dict) -> tuple[str, str] | CommandResponse | None:
-    data = payload.get("data") or {}
-    key = data.get("key") or {}
-    message = data.get("message") or {}
+def command_text(message: dict) -> str | None:
+    if not isinstance(message, dict):
+        return None
     for wrapper in ("ephemeralMessage", "viewOnceMessage", "viewOnceMessageV2"):
         if wrapper in message:
             message = (message[wrapper] or {}).get("message") or {}
     text = message.get("conversation") or (message.get("extendedTextMessage") or {}).get("text") or ""
     if not isinstance(text, str) or not re.match(r"^/fin(?:\s|$)", text.strip(), re.IGNORECASE):
+        return None
+    return text
+
+
+def _process_command(db: Session, payload: dict) -> tuple[str, str] | CommandResponse | None:
+    data = payload.get("data") or {}
+    key = data.get("key") or {}
+    text = command_text(data.get("message") or {})
+    if text is None:
         return None
 
     context = _authorized_context(db, payload)
@@ -161,7 +169,7 @@ def _process_command(db: Session, payload: dict) -> tuple[str, str] | CommandRes
                 raise ValueError("Categoria não encontrada. Consulte as categorias no painel.")
         return chat_jid, filtered_report(db, ledger.id, start, end, query.kind, chosen_category, query.status)
     if lower == "listar":
-        entries = recent_entries(db, ledger.id)
+        entries = recent_entries(db, ledger.id, today)
         return chat_jid, "Últimos lançamentos:\n" + "\n".join(_format_entry(e) for e in entries) if entries else "Nenhum lançamento nesta conta."
     match = re.fullmatch(r"confirmar\s+(\d+)", lower)
     if match:

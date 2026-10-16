@@ -1,4 +1,3 @@
-import re
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, Request
@@ -6,6 +5,7 @@ from fastapi.staticfiles import StaticFiles
 from sqlalchemy.exc import IntegrityError
 
 from app.admin import router as admin_router
+from app.commands import command_text
 from app.config import get_settings, validate_runtime
 from app.db import SessionLocal
 from app.models import Inbox
@@ -49,14 +49,8 @@ async def evolution_webhook(request: Request) -> dict[str, bool]:
     message_id = key.get("id")
     if not message_id or not key.get("remoteJid"):
         return {"ok": True}
-    message = data.get("message") or {}
-    if not isinstance(message, dict):
-        return {"ok": True}
-    for wrapper in ("ephemeralMessage", "viewOnceMessage", "viewOnceMessageV2"):
-        if wrapper in message:
-            message = (message[wrapper] or {}).get("message") or {}
-    command = message.get("conversation") or (message.get("extendedTextMessage") or {}).get("text") or ""
-    if not isinstance(command, str) or not re.match(r"^/fin(?:\s|$)", command.strip(), re.IGNORECASE):
+    command = command_text(data.get("message") or {})
+    if command is None:
         return {"ok": True}
     normalized = {
         "event": "messages.upsert",

@@ -8,9 +8,9 @@ from sqlalchemy.orm import sessionmaker
 from starlette.requests import Request  # noqa: F401  (mantém o mesmo estilo dos outros testes)
 
 from app.admin import cancel_schedule
-from app.commands import process_command
+from app.commands import command_text, process_command
 from app.db import Base
-from app.finance import create_entries, seed_categories
+from app.finance import create_entries, get_or_create_ledger, seed_categories
 from app.models import Audit, Chat, Entry, Ledger, Schedule
 
 OWNER = "owner@s.whatsapp.net"
@@ -157,6 +157,32 @@ class FlowTest(CommandsBase):
                 process_command(self.db, payload(FRIEND, text=text))
         self.assertIsNone(entry.deleted_at)
         self.assertEqual(entry.amount_cents, 1000)
+
+
+    def test_list_ignores_future_planned_entries(self):
+        ledger = get_or_create_ledger(self.db, FRIEND, "private", FRIEND)
+        create_entries(
+            self.db, ledger=ledger, creator_jid=FRIEND, kind="expense",
+            amount_cents=5000, description="aluguel", category="Moradia",
+            occurred_on=date(2026, 5, 15), installment_count=1, recurrence_frequency="monthly",
+            recurrence_count=12, source_instance="finbot", source_message_id="r1",
+            today=date(2026, 6, 15))
+        response = process_command(self.db, payload(FRIEND, text="/fin listar", message_id="m2"))
+        dates = [e.occurred_on for e in self.db.scalars(select(Entry))]
+        self.assertTrue(any(d > date(2026, 6, 15) for d in dates))
+        self.assertEqual(response.text.count("aluguel"), 2)
+        self.assertNotIn("2026-07", response.text)
+        self.assertNotIn("/07", response.text)
+
+
+class CommandTextTest(TestCase):
+    def test_extracts_fin_commands_only(self):
+        self.assertEqual(command_text({"conversation": "/fin listar"}), "/fin listar")
+        self.assertEqual(command_text({"extendedTextMessage": {"text": "/FIN"}}), "/FIN")
+        wrapped = {"ephemeralMessage": {"message": {"conversation": "/fin ajuda"}}}
+        self.assertEqual(command_text(wrapped), "/fin ajuda")
+        self.assertIsNone(command_text({"conversation": "/finance"}))
+        self.assertIsNone(command_text({}))
 
 
 class PanelCancelScheduleTest(CommandsBase):

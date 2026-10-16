@@ -292,8 +292,8 @@ def filtered_report(db: Session, ledger_id: int, start: date, end: date,
     return "\n".join(lines)
 
 
-def recent_entries(db: Session, ledger_id: int, limit: int = 10) -> list[Entry]:
-    return list(db.scalars(select(Entry).where(Entry.ledger_id == ledger_id, Entry.deleted_at.is_(None)).order_by(Entry.occurred_on.desc(), Entry.id.desc()).limit(limit)))
+def recent_entries(db: Session, ledger_id: int, today: date, limit: int = 10) -> list[Entry]:
+    return list(db.scalars(select(Entry).where(Entry.ledger_id == ledger_id, Entry.deleted_at.is_(None), Entry.occurred_on <= today).order_by(Entry.occurred_on.desc(), Entry.id.desc()).limit(limit)))
 
 
 def get_entry(db: Session, ledger_id: int, entry_id: int) -> Entry:
