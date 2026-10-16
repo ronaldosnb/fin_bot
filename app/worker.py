@@ -5,7 +5,7 @@ from zoneinfo import ZoneInfo
 
 from dateutil.relativedelta import relativedelta
 import httpx
-from sqlalchemy import or_, select
+from sqlalchemy import delete, or_, select
 
 from app.commands import process_command
 from app.config import get_settings, validate_runtime
@@ -121,9 +121,28 @@ def expand_schedules() -> None:
         db.commit()
 
 
+def purge_processed(days: int = 30) -> int:
+    cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+    with SessionLocal() as db:
+        old_inbox = select(Inbox.id).where(Inbox.created_at < cutoff)
+        sent = db.execute(
+            delete(Outbox).where(Outbox.state == "sent", Outbox.inbox_id.in_(old_inbox))
+        ).rowcount
+        done = db.execute(
+            delete(Inbox).where(
+                Inbox.state == "done",
+                Inbox.created_at < cutoff,
+                Inbox.id.not_in(select(Outbox.inbox_id)),
+            )
+        ).rowcount
+        db.commit()
+    return sent + done
+
+
 def main() -> None:
     validate_runtime()
     last_expansion = None
+    last_purge = None
     with SessionLocal() as db:
         seed_categories(db)
     while True:
@@ -134,6 +153,14 @@ def main() -> None:
                 last_expansion = today
             except Exception:
                 log.exception("Falha ao expandir recorrências")
+        if today != last_purge:
+            last_purge = today
+            try:
+                purged = purge_processed()
+                if purged:
+                    log.info("Filas limpas: %s itens removidos", purged)
+            except Exception:
+                log.exception("Falha ao limpar filas")
         worked = process_inbox()
         worked = process_outbox() or worked
         if not worked:
