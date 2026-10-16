@@ -65,7 +65,7 @@ O webhook recebe a mensagem, descarta o que não começa com `/fin` e grava o re
 - **Valores em centavos inteiros.** Evita erro de arredondamento com ponto flutuante. Nas parcelas, o resto da divisão vai uma a uma para as primeiras parcelas, e a soma bate com o total.
 - **Auditoria e exclusão lógica.** Edições, confirmações e exclusões gravam um registro em `audit`, e lançamentos excluídos ficam no banco com `deleted_at`.
 - **Segurança do painel.** Senha com Argon2, cookie de sessão assinado e expirável, token CSRF nos formulários e bloqueio de login após 5 tentativas em 15 minutos por IP.
-- **Privacidade.** Mensagens sem `/fin` são descartadas no webhook. Depois do processamento, o texto do comando sai da fila de entrada e o texto ou PDF da resposta sai da fila de saída após o envio. Lançamentos e auditoria permanecem no banco financeiro; mensagens com falha ficam na fila até revisão.
+- **Privacidade.** Mensagens sem `/fin` são descartadas no webhook. Depois do processamento, o texto do comando sai da fila de entrada e o texto ou PDF da resposta sai da fila de saída após o envio. Lançamentos e auditoria permanecem no banco financeiro; mensagens com falha ficam na fila até revisão. Itens já processados são removidos das filas após 30 dias.
 - **Webhook só na rede interna do Docker.** O Caddy responde 404 para `/webhook/*`, então o endpoint não fica exposto na internet.
 - **A IA só extrai dados estruturados.** O Gemini devolve JSON com esquema fixo; categorias, limites de parcelas e conflito entre parcelamento e recorrência são validados em código.
 
